@@ -1,0 +1,21 @@
+parameters:
+    level: max
+    paths:
+        - src
+    excludePaths:
+        - vendor
+        - Tests
+    bootstrapFiles:
+        - Tests/phpstan-bootstrap.php
+    treatPhpDocTypesAsCertain: false
+    checkMissingIterableValueType: false
+    ignoreErrors:
+        # WordPress global functions are stubs from szepeviktor/phpstan-wordpress
+        - '#Function apply_filters\(\) is not found#'
+    universalObjectCratesClasses:
+        - WP_Post
+        - WP_User
+        - WP_Term
+        - WP_Error
+    stubFiles:
+        - Tests/stubs/wordpress.stub

@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<ruleset name="WP Agent">
+    <description>WP Agent — WordPress Coding Standards + PSR-12 bridge</description>
+
+    <!-- Scan these paths -->
+    <file>src/</file>
+    <file>Tests/</file>
+    <file>wp-agent.php</file>
+
+    <!-- Exclude generated/vendor paths -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+
+    <!-- Show progress and sniff codes -->
+    <arg value="ps"/>
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+    <arg name="parallel" value="8"/>
+
+    <!-- WordPress Coding Standards -->
+    <rule ref="WordPress-Extra">
+        <!-- Allow short array syntax [] which is PSR standard -->
+        <exclude name="Generic.Arrays.DisallowShortArraySyntax"/>
+        <!-- Allow strict type declarations -->
+        <exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
+    </rule>
+
+    <rule ref="WordPress-Docs"/>
+
+    <!-- Enforce minimum PHP version in sniffs -->
+    <config name="minimum_supported_wp_version" value="6.4"/>
+    <config name="testVersion" value="8.2-"/>
+
+    <!-- Enforce strict types declaration in every file -->
+    <rule ref="Generic.PHP.RequireStrictTypes"/>
+
+    <!-- PSR-4 file naming — class names must match file names -->
+    <rule ref="Squiz.Classes.ClassFileName"/>
+
+    <!-- Enforce type declarations -->
+    <rule ref="SlevomatCodingStandard.TypeHints.ReturnTypeHint">
+        <properties>
+            <property name="enableMixedTypeHint" value="true"/>
+            <property name="enableUnionTypeHint" value="true"/>
+        </properties>
+    </rule>
+
+    <!-- Namespace must match PSR-4 directory structure -->
+    <rule ref="WordPress.Files.FileName">
+        <properties>
+            <!-- Class files use PascalCase -->
+            <property name="strict_class_file_names" value="false"/>
+        </properties>
+    </rule>
+</ruleset>
