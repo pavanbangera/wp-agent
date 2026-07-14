@@ -53,16 +53,32 @@ final class ElementorService
         }
 
         // Elementor requires JSON-encoded data stored in _elementor_data meta.
+        // wp_slash() is required because update_post_meta() calls stripslashes() internally.
+        // Without it, any JSON containing escaped quotes (\" ) or newlines (\n) gets corrupted
+        // in the database, causing silent blank-page rendering failures.
         $json = wp_json_encode($layout);
 
-        update_post_meta($pageId, '_elementor_data', $json);
+        update_post_meta($pageId, '_elementor_data', wp_slash($json));
         update_post_meta($pageId, '_elementor_edit_mode', 'builder');
         update_post_meta($pageId, '_elementor_template_type', 'wp-page');
 
-        // Clean elementor cache for this page.
+        // Bust per-page Elementor CSS/cache safely.
+        //
+        // NOTE: We intentionally do NOT call $doc->save([]) here. In REST API / admin-ajax
+        // contexts Elementor's full admin environment (filesystem, i18n, scripts) may not be
+        // bootstrapped, so calling save() triggers a fatal HTTP 500. Cache transients can be
+        // deleted safely without that dependency.
         if ( class_exists('\Elementor\Plugin') ) {
-            \Elementor\Plugin::$instance->documents->get($pageId)?->save([]);
+            delete_transient('elementor_css_file_' . $pageId);
+
+            if ( isset(\Elementor\Plugin::$instance->files_manager) ) {
+                \Elementor\Plugin::$instance->files_manager->clear_cache();
+            }
         }
+
+        // Flush WordPress object cache for this post so callers immediately see the new meta.
+        clean_post_cache($pageId);
+        wp_cache_delete($pageId, 'post_meta');
 
         do_action('wpa_elementor_page_layout_created', $pageId, $layout);
 
