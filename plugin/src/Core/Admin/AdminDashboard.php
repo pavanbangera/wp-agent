@@ -66,6 +66,11 @@ final class AdminDashboard
         // Fetch tool collection.
         $tools = $this->toolRegistry->all();
 
+        // Get current user details.
+        $currentUser = wp_get_current_user();
+        $username    = $currentUser instanceof \WP_User ? $currentUser->user_login : 'admin';
+        $sseUrl      = get_rest_url(null, 'wp-agent/v1/mcp/sse');
+
         // Enqueue Google Font styling inline for convenience.
         ?>
         <style>
@@ -158,6 +163,60 @@ final class AdminDashboard
                 color: #f1f5f9;
             }
 
+            .wpa-input-group {
+                margin-bottom: 20px;
+            }
+
+            .wpa-label {
+                display: block;
+                font-weight: 500;
+                margin-bottom: 8px;
+                color: #cbd5e1;
+            }
+
+            .wpa-input {
+                width: 100%;
+                background-color: #0f172a;
+                border: 1px solid #475569;
+                border-radius: 6px;
+                padding: 10px 14px;
+                color: #f8fafc;
+                font-family: inherit;
+            }
+
+            .wpa-input:focus {
+                border-color: #38bdf8;
+                outline: none;
+            }
+
+            .wpa-textarea {
+                width: 100%;
+                height: 150px;
+                background-color: #0f172a;
+                border: 1px solid #475569;
+                border-radius: 6px;
+                padding: 12px;
+                color: #38bdf8;
+                font-family: monospace;
+                font-size: 13px;
+                resize: none;
+            }
+
+            .wpa-button {
+                background: linear-gradient(135deg, #38bdf8, #4f46e5);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: opacity 0.2s ease;
+            }
+
+            .wpa-button:hover {
+                opacity: 0.9;
+            }
+
             .wpa-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -226,6 +285,30 @@ final class AdminDashboard
                 </div>
             </div>
 
+            <!-- MCP Configurator -->
+            <div class="wpa-section">
+                <h2 class="wpa-section-title">IDE MCP Configurator</h2>
+                <p style="color: #94a3b8; margin-bottom: 20px;">Generate your ready-to-copy client configuration file context for Cursor, Claude Code, Cline, etc. securely on the fly.</p>
+                
+                <input type="hidden" id="wpa-user" value="<?php echo esc_attr($username); ?>">
+                <input type="hidden" id="wpa-url" value="<?php echo esc_url($sseUrl); ?>">
+                
+                <div class="wpa-input-group">
+                    <label class="wpa-label" for="wpa-pass">WordPress Application Password</label>
+                    <input class="wpa-input" type="text" id="wpa-pass" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" oninput="wpaUpdateConfig()">
+                    <span style="font-size: 12px; color: #94a3b8; margin-top: 6px; display: block;">
+                        Create this in your profile page under Users -> Profile -> Application Passwords.
+                    </span>
+                </div>
+
+                <div class="wpa-input-group">
+                    <label class="wpa-label" for="wpa-json-output">Generated MCP Config (JSON)</label>
+                    <textarea class="wpa-textarea" id="wpa-json-output" readonly></textarea>
+                </div>
+
+                <button class="wpa-button" type="button" onclick="wpaCopyConfig()">Copy Configuration</button>
+            </div>
+
             <!-- Tools catalog -->
             <div class="wpa-section">
                 <h2 class="wpa-section-title">MCP Tools Directory</h2>
@@ -288,6 +371,44 @@ final class AdminDashboard
                 <?php endif; ?>
             </div>
         </div>
+
+        <script>
+            function wpaUpdateConfig() {
+                const username = document.getElementById('wpa-user').value;
+                const rawPass = document.getElementById('wpa-pass').value;
+                const cleanPass = rawPass.replace(/\s+/g, '');
+                const sseUrl = document.getElementById('wpa-url').value;
+
+                let authHeader = "Basic <YOUR_BASE64_CREDENTIALS>";
+                if (cleanPass) {
+                    authHeader = "Basic " + btoa(username + ":" + cleanPass);
+                }
+
+                const configObj = {
+                    "mcpServers": {
+                        "wp-agent": {
+                            "url": sseUrl,
+                            "headers": {
+                                "Authorization": authHeader
+                            }
+                        }
+                    }
+                };
+
+                document.getElementById('wpa-json-output').value = JSON.stringify(configObj, null, 2);
+            }
+
+            function wpaCopyConfig() {
+                const copyText = document.getElementById('wpa-json-output');
+                copyText.select();
+                copyText.setSelectionRange(0, 99999);
+                navigator.clipboard.writeText(copyText.value);
+                alert("MCP Configuration copied to clipboard!");
+            }
+
+            // Initialize default values
+            wpaUpdateConfig();
+        </script>
         <?php
     }
 }
