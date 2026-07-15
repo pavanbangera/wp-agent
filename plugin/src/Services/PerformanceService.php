@@ -17,7 +17,10 @@ final class PerformanceService
     /**
      * Clears all detected WordPress and server cache layers.
      *
-     * @return array<string, bool> Log of caching plugins cleared.
+     * Covers: WP Super Cache, W3 Total Cache, WP Rocket, LiteSpeed Cache (object + page + CDN),
+     * Autoptimize, Elementor CSS cache, WordPress rewrite rules, native object cache & transients.
+     *
+     * @return array<string, bool|string> Log of caching layers cleared.
      */
     public function clearCache(): array
     {
@@ -35,30 +38,73 @@ final class PerformanceService
             $status['w3_total_cache'] = true;
         }
 
-        // 3. WP Rocket.
+        // 3. WP Rocket — full page cache + CDN.
         if ( function_exists('rocket_clean_domain') ) {
             rocket_clean_domain();
             $status['wp_rocket'] = true;
         }
 
-        // 4. LiteSpeed Cache.
+        // 4. LiteSpeed Cache — object cache.
         if ( has_action('litespeed_control_clean_all') ) {
             do_action('litespeed_control_clean_all');
             $status['litespeed_cache'] = true;
         }
 
-        // 5. Autoptimize.
+        // 5. LiteSpeed Cache — full-page / HTML cache purge.
+        if ( has_action('litespeed_purge_all') ) {
+            do_action('litespeed_purge_all');
+            $status['litespeed_page_cache'] = true;
+        }
+
+        // 6. LiteSpeed CDN / ESI edge cache (HCDN/Hostinger CDN).
+        if ( has_action('litespeed_cdn_purge_all') ) {
+            do_action('litespeed_cdn_purge_all');
+            $status['litespeed_cdn'] = true;
+        }
+
+        // 7. Autoptimize.
         if ( class_exists('autoptimizeCache') && method_exists('autoptimizeCache', 'clearall') ) {
             \autoptimizeCache::clearall();
             $status['autoptimize'] = true;
         }
 
-        // 6. Native Object Cache & Transients.
+        // 8. Elementor CSS cache — delete per-page CSS transients and regenerate global CSS.
+        if ( class_exists('\Elementor\Plugin') ) {
+            $elementorCleared = false;
+
+            if ( isset(\Elementor\Plugin::$instance->files_manager) ) {
+                \Elementor\Plugin::$instance->files_manager->clear_cache();
+                $elementorCleared = true;
+            }
+
+            // Also delete all elementor_css_file_* transients individually.
+            global $wpdb;
+            // phpcs:disable WordPress.DB.DirectDatabaseQuery
+            $deleted = $wpdb->query(
+                "DELETE FROM {$wpdb->options}
+                 WHERE option_name LIKE '_transient_elementor_css_file_%'
+                    OR option_name LIKE '_transient_timeout_elementor_css_file_%'"
+            );
+            // phpcs:enable
+
+            if ( $deleted !== false ) {
+                $elementorCleared = true;
+            }
+
+            $status['elementor_css_cache'] = $elementorCleared;
+        }
+
+        // 9. WordPress rewrite rules (flush .htaccess and rules cache).
+        flush_rewrite_rules(true);
+        $status['rewrite_rules'] = true;
+
+        // 10. Native Object Cache & Transients.
         wp_cache_flush();
         $status['object_cache'] = true;
 
         return $status;
     }
+
 
     /**
      * Returns a stub performance audit score card.

@@ -108,10 +108,18 @@ final class ApplicationPasswordDriver implements AuthDriverInterface
 
         [ $login, $password ] = explode(':', $decoded, 2);
 
+        $username = sanitize_user($login);
+        if ( str_contains($login, '@') ) {
+            $userByEmail = get_user_by('email', $login);
+            if ( $userByEmail instanceof \WP_User ) {
+                $username = $userByEmail->user_login;
+            }
+        }
+
         // wp_authenticate_application_password handles the actual verification.
         $authenticated = wp_authenticate_application_password(
             null,
-            sanitize_user($login),
+            $username,
             sanitize_text_field($password),
         );
 

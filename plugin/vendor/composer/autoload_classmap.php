@@ -340,4 +340,15 @@ return array(
     'WpAgent\\Tools\\WooCommerce\\ListProductsTool' => $baseDir . '/src/Tools/WooCommerce/ListProductsTool.php',
     'WpAgent\\Tools\\WooCommerce\\ManageInventoryTool' => $baseDir . '/src/Tools/WooCommerce/ManageInventoryTool.php',
     'WpAgent\\Tools\\WooCommerce\\UpdateProductTool' => $baseDir . '/src/Tools/WooCommerce/UpdateProductTool.php',
+    // ── New tools added in audit fix ──────────────────────────────────────────
+    'WpAgent\\Tools\\AI\\FileWriteTool' => $baseDir . '/src/Tools/AI/FileWriteTool.php',
+    'WpAgent\\Tools\\AI\\FileReadTool' => $baseDir . '/src/Tools/AI/FileReadTool.php',
+    'WpAgent\\Tools\\Posts\\QueryPostTool' => $baseDir . '/src/Tools/Posts/QueryPostTool.php',
+    'WpAgent\\Tools\\Themes\\GetActiveThemeTool' => $baseDir . '/src/Tools/Themes/GetActiveThemeTool.php',
+    'WpAgent\\Tools\\Plugins\\GetPluginStatusTool' => $baseDir . '/src/Tools/Plugins/GetPluginStatusTool.php',
+    'WpAgent\\Tools\\Elementor\\GetTemplateTool' => $baseDir . '/src/Tools/Elementor/GetTemplateTool.php',
+    'WpAgent\\Tools\\Elementor\\UpdateTemplateTool' => $baseDir . '/src/Tools/Elementor/UpdateTemplateTool.php',
+    'WpAgent\\Tools\\Elementor\\SetPageLayoutTool' => $baseDir . '/src/Tools/Elementor/SetPageLayoutTool.php',
+    'WpAgent\\Tools\\Performance\\FlushRewritesTool' => $baseDir . '/src/Tools/Performance/FlushRewritesTool.php',
+    'WpAgent\\Tools\\Site\\SetOptionTool' => $baseDir . '/src/Tools/Site/SetOptionTool.php',
 );

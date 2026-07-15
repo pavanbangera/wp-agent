@@ -66,6 +66,16 @@ final class CreateElementorPageTool extends AbstractTool
                     'description' => 'E.g. "elementor_header_footer" (Elementor Full Width) or "elementor_canvas".',
                     'default'     => 'elementor_header_footer',
                 ],
+                'css_id' => [
+                    'type'        => 'string',
+                    'description' => 'Custom HTML ID applied to the Elementor page wrapper (maps to _css_id internally).',
+                    'default'     => '',
+                ],
+                'css_classes' => [
+                    'type'        => 'string',
+                    'description' => 'Space-separated custom CSS classes for the Elementor page wrapper (maps to _css_classes internally).',
+                    'default'     => '',
+                ],
             ],
             'required'             => ['title'],
             'additionalProperties' => false,
@@ -94,7 +104,17 @@ final class CreateElementorPageTool extends AbstractTool
             'template' => $template,
         ]);
 
-        // 2. Set up the Elementor layout metadata.
+        // 2. Remap css_id / css_classes to Elementor's internal underscore-prefixed keys.
+        //    Elementor reads '_css_id' and '_css_classes' from post meta; passing 'css_id'
+        //    directly has no effect because the internal prefix differs.
+        if ( ! empty($args['css_id']) ) {
+            update_post_meta($page->ID, '_css_id', sanitize_html_class($args['css_id']));
+        }
+        if ( ! empty($args['css_classes']) ) {
+            update_post_meta($page->ID, '_css_classes', sanitize_text_field($args['css_classes']));
+        }
+
+        // 3. Set up the Elementor layout metadata.
         $this->elementorService->createPageLayout($page->ID, $layout);
 
         return ToolResult::json(array_merge(
@@ -102,6 +122,8 @@ final class CreateElementorPageTool extends AbstractTool
             [
                 'elementor_enabled' => true,
                 'layout_elements'   => count($layout),
+                'css_id'            => $args['css_id'] ?? '',
+                'css_classes'       => $args['css_classes'] ?? '',
             ]
         ));
     }

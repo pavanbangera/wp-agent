@@ -53,16 +53,32 @@ final class ElementorService
         }
 
         // Elementor requires JSON-encoded data stored in _elementor_data meta.
+        // wp_slash() is required because update_post_meta() calls stripslashes() internally.
+        // Without it, any JSON containing escaped quotes (\" ) or newlines (\n) gets corrupted
+        // in the database, causing silent blank-page rendering failures.
         $json = wp_json_encode($layout);
 
-        update_post_meta($pageId, '_elementor_data', $json);
+        update_post_meta($pageId, '_elementor_data', wp_slash($json));
         update_post_meta($pageId, '_elementor_edit_mode', 'builder');
         update_post_meta($pageId, '_elementor_template_type', 'wp-page');
 
-        // Clean elementor cache for this page.
+        // Bust per-page Elementor CSS/cache safely.
+        //
+        // NOTE: We intentionally do NOT call $doc->save([]) here. In REST API / admin-ajax
+        // contexts Elementor's full admin environment (filesystem, i18n, scripts) may not be
+        // bootstrapped, so calling save() triggers a fatal HTTP 500. Cache transients can be
+        // deleted safely without that dependency.
         if ( class_exists('\Elementor\Plugin') ) {
-            \Elementor\Plugin::$instance->documents->get($pageId)?->save([]);
+            delete_transient('elementor_css_file_' . $pageId);
+
+            if ( isset(\Elementor\Plugin::$instance->files_manager) ) {
+                \Elementor\Plugin::$instance->files_manager->clear_cache();
+            }
         }
+
+        // Flush WordPress object cache for this post so callers immediately see the new meta.
+        clean_post_cache($pageId);
+        wp_cache_delete($pageId, 'post_meta');
 
         do_action('wpa_elementor_page_layout_created', $pageId, $layout);
 
@@ -234,6 +250,122 @@ final class ElementorService
     }
 
     /**
+     * Retrieves an Elementor template from the library by ID or title.
+     *
+     * @param int|string $idOrTitle  Post ID (int) or post title (string).
+     * @param string     $type       Template type filter: 'any', 'page', 'section', 'header', 'footer', 'popup', etc.
+     *
+     * @return array{id: int, title: string, type: string, status: string, layout: array<mixed>, url: string}
+     *
+     * @throws ToolException
+     */
+    public function getTemplate(int|string $idOrTitle, string $type = 'any'): array
+    {
+        $this->requireElementor();
+
+        if ( is_int($idOrTitle) ) {
+            $post = get_post($idOrTitle);
+        } else {
+            // Search by title in the elementor_library CPT.
+            $query = new \WP_Query([
+                'post_type'      => 'elementor_library',
+                'title'          => $idOrTitle,
+                'post_status'    => 'any',
+                'posts_per_page' => 1,
+                'no_found_rows'  => true,
+            ]);
+
+            $post = $query->have_posts() ? $query->posts[0] : null;
+        }
+
+        if ( ! ($post instanceof \WP_Post) || $post->post_type !== 'elementor_library' ) {
+            throw ToolException::notFound(self::TOOL_NAME, 'Elementor Template', (string) $idOrTitle);
+        }
+
+        $templateType = get_post_meta($post->ID, '_elementor_template_type', true) ?: 'unknown';
+
+        // Filter by type if requested.
+        if ( $type !== 'any' && $templateType !== $type ) {
+            throw new ToolException(
+                "Template '{$post->post_title}' is of type '{$templateType}', not '{$type}'.",
+                self::TOOL_NAME,
+                ToolException::RESOURCE_NOT_FOUND
+            );
+        }
+
+        $rawMeta = get_post_meta($post->ID, '_elementor_data', true);
+        $layout  = [];
+
+        if ( ! empty($rawMeta) ) {
+            $decoded = json_decode($rawMeta, true);
+            if ( is_array($decoded) ) {
+                $layout = $decoded;
+            }
+        }
+
+        return [
+            'id'      => $post->ID,
+            'title'   => $post->post_title,
+            'type'    => $templateType,
+            'status'  => $post->post_status,
+            'layout'  => $layout,
+            'url'     => get_permalink($post->ID) ?: '',
+        ];
+    }
+
+    /**
+     * Updates an Elementor template's layout JSON (and optionally its title).
+     *
+     * Always uses wp_slash() to prevent WordPress's internal stripslashes() from
+     * corrupting the stored JSON. Callers MUST NOT pre-slash the layout array.
+     *
+     * @param int                  $templateId The elementor_library post ID.
+     * @param array<mixed>         $layout     New Elementor layout elements array.
+     * @param string|null          $title      Optional new title for the template.
+     *
+     * @throws ToolException
+     */
+    public function updateTemplate(int $templateId, array $layout, ?string $title = null): bool
+    {
+        $this->requireElementor();
+
+        $post = get_post($templateId);
+        if ( ! ($post instanceof \WP_Post) || $post->post_type !== 'elementor_library' ) {
+            throw ToolException::notFound(self::TOOL_NAME, 'Elementor Template', $templateId);
+        }
+
+        // Save layout using wp_slash() — required because update_post_meta() calls
+        // stripslashes() internally, which corrupts JSON escaped characters (\", \n, etc.).
+        $json = wp_json_encode($layout);
+        update_post_meta($templateId, '_elementor_data', wp_slash($json));
+        update_post_meta($templateId, '_elementor_edit_mode', 'builder');
+
+        // Optionally update the template title.
+        if ( null !== $title && $title !== $post->post_title ) {
+            wp_update_post([
+                'ID'         => $templateId,
+                'post_title' => sanitize_text_field($title),
+            ]);
+        }
+
+        // Bust Elementor CSS/template cache.
+        if ( class_exists('\Elementor\Plugin') ) {
+            delete_transient('elementor_css_file_' . $templateId);
+
+            if ( isset(\Elementor\Plugin::$instance->files_manager) ) {
+                \Elementor\Plugin::$instance->files_manager->clear_cache();
+            }
+        }
+
+        clean_post_cache($templateId);
+        wp_cache_delete($templateId, 'post_meta');
+
+        do_action('wpa_elementor_template_updated', $templateId, $layout);
+
+        return true;
+    }
+
+    /**
      * Resolves the active Kit ID from elementor library.
      */
     private function getActiveKitId(): int
@@ -257,3 +389,4 @@ final class ElementorService
         return ! empty($kits) ? (int) $kits[0] : 0;
     }
 }
+
