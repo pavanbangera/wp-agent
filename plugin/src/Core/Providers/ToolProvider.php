@@ -26,6 +26,7 @@ use WpAgent\Services\CodeExecutionService;
 // Site tools.
 use WpAgent\Tools\Site\GetOptionTool;
 use WpAgent\Tools\Site\GetSiteInfoTool;
+use WpAgent\Tools\Site\SetOptionTool;
 
 // Page tools.
 use WpAgent\Tools\Pages\CreatePageTool;
@@ -46,6 +47,7 @@ use WpAgent\Tools\Posts\GetPostTool;
 use WpAgent\Tools\Posts\ListPostsTool;
 use WpAgent\Tools\Posts\ManageCategoriesTool;
 use WpAgent\Tools\Posts\ManageTagsTool;
+use WpAgent\Tools\Posts\QueryPostTool;
 use WpAgent\Tools\Posts\SetFeaturedImageTool;
 use WpAgent\Tools\Posts\UpdatePostTool;
 
@@ -74,27 +76,32 @@ use WpAgent\Tools\Plugins\UpdatePluginTool;
 use WpAgent\Tools\Plugins\RollbackPluginTool;
 use WpAgent\Tools\Plugins\ListPluginsTool;
 use WpAgent\Tools\Plugins\BulkInstallPluginsTool;
+use WpAgent\Tools\Plugins\GetPluginStatusTool;
 
 // Theme tools.
-use WpAgent\Tools\Themes\SearchThemesTool;
-use WpAgent\Tools\Themes\InstallThemeTool;
 use WpAgent\Tools\Themes\ActivateThemeTool;
 use WpAgent\Tools\Themes\CreateChildThemeTool;
-use WpAgent\Tools\Themes\ImportDemoTool;
 use WpAgent\Tools\Themes\ExportDemoTool;
+use WpAgent\Tools\Themes\GetActiveThemeTool;
+use WpAgent\Tools\Themes\ImportDemoTool;
+use WpAgent\Tools\Themes\InstallThemeTool;
+use WpAgent\Tools\Themes\SearchThemesTool;
 
 // Elementor tools.
-use WpAgent\Tools\Elementor\CreateElementorPageTool;
-use WpAgent\Tools\Elementor\ImportTemplateTool;
-use WpAgent\Tools\Elementor\ExportTemplateTool;
-use WpAgent\Tools\Elementor\DuplicateTemplateTool;
+use WpAgent\Tools\Elementor\BuildFooterTool;
+use WpAgent\Tools\Elementor\BuildHeaderTool;
+use WpAgent\Tools\Elementor\BuildPopupTool;
 use WpAgent\Tools\Elementor\CreateContainerTool;
+use WpAgent\Tools\Elementor\CreateElementorPageTool;
+use WpAgent\Tools\Elementor\DuplicateTemplateTool;
+use WpAgent\Tools\Elementor\ExportTemplateTool;
+use WpAgent\Tools\Elementor\GetTemplateTool;
+use WpAgent\Tools\Elementor\ImportTemplateTool;
 use WpAgent\Tools\Elementor\InsertWidgetTool;
 use WpAgent\Tools\Elementor\SetGlobalColorsTool;
 use WpAgent\Tools\Elementor\SetGlobalFontsTool;
-use WpAgent\Tools\Elementor\BuildHeaderTool;
-use WpAgent\Tools\Elementor\BuildFooterTool;
-use WpAgent\Tools\Elementor\BuildPopupTool;
+use WpAgent\Tools\Elementor\SetPageLayoutTool;
+use WpAgent\Tools\Elementor\UpdateTemplateTool;
 
 // Gutenberg tools.
 use WpAgent\Tools\Gutenberg\CreateBlockPageTool;
@@ -122,10 +129,11 @@ use WpAgent\Tools\SEO\GenerateSitemapTool;
 use WpAgent\Tools\SEO\RunSeoAuditTool;
 
 // Performance tools.
-use WpAgent\Tools\Performance\RunLighthouseTool;
 use WpAgent\Tools\Performance\ClearCacheTool;
-use WpAgent\Tools\Performance\OptimizeImagesTool;
+use WpAgent\Tools\Performance\FlushRewritesTool;
 use WpAgent\Tools\Performance\GetCwvTool;
+use WpAgent\Tools\Performance\OptimizeImagesTool;
+use WpAgent\Tools\Performance\RunLighthouseTool;
 
 // Security tools.
 use WpAgent\Tools\Security\CreateBackupTool;
@@ -136,8 +144,10 @@ use WpAgent\Tools\Security\ScanPluginsTool;
 use WpAgent\Tools\Security\CheckHeadersTool;
 
 // AI Planner tools.
-use WpAgent\Tools\AI\PlanGoalTool;
 use WpAgent\Tools\AI\ExecuteCodeTool;
+use WpAgent\Tools\AI\FileReadTool;
+use WpAgent\Tools\AI\FileWriteTool;
+use WpAgent\Tools\AI\PlanGoalTool;
 use WpAgent\Tools\AI\ScaffoldPluginTool;
 use WpAgent\Tools\AI\ScaffoldThemeTool;
 
@@ -247,7 +257,8 @@ final class ToolProvider extends ServiceProvider
         // -----------------------------------------------------------------------
 
         $this->container->bind(GetSiteInfoTool::class, fn (): GetSiteInfoTool => new GetSiteInfoTool());
-        $this->container->bind(GetOptionTool::class, fn (): GetOptionTool => new GetOptionTool());
+        $this->container->bind(GetOptionTool::class,   fn (): GetOptionTool   => new GetOptionTool());
+        $this->container->bind(SetOptionTool::class,   fn (): SetOptionTool   => new SetOptionTool());
 
         // -----------------------------------------------------------------------
         // Page tools.
@@ -317,6 +328,10 @@ final class ToolProvider extends ServiceProvider
         $this->container->bind(
             ListPostsTool::class,
             fn ($c): ListPostsTool => new ListPostsTool($c->get(PostService::class))
+        );
+        $this->container->bind(
+            QueryPostTool::class,
+            fn (): QueryPostTool => new QueryPostTool()
         );
         $this->container->bind(
             SetFeaturedImageTool::class,
@@ -398,6 +413,10 @@ final class ToolProvider extends ServiceProvider
             fn ($c): InstallPluginTool => new InstallPluginTool($c->get(PluginService::class))
         );
         $this->container->bind(
+            GetPluginStatusTool::class,
+            fn (): GetPluginStatusTool => new GetPluginStatusTool()
+        );
+        $this->container->bind(
             ActivatePluginTool::class,
             fn ($c): ActivatePluginTool => new ActivatePluginTool($c->get(PluginService::class))
         );
@@ -447,6 +466,10 @@ final class ToolProvider extends ServiceProvider
             fn ($c): CreateChildThemeTool => new CreateChildThemeTool($c->get(ThemeService::class))
         );
         $this->container->bind(
+            GetActiveThemeTool::class,
+            fn (): GetActiveThemeTool => new GetActiveThemeTool()
+        );
+        $this->container->bind(
             ImportDemoTool::class,
             fn (): ImportDemoTool => new ImportDemoTool()
         );
@@ -482,6 +505,18 @@ final class ToolProvider extends ServiceProvider
         $this->container->bind(
             InsertWidgetTool::class,
             fn ($c): InsertWidgetTool => new InsertWidgetTool($c->get(ElementorService::class))
+        );
+        $this->container->bind(
+            GetTemplateTool::class,
+            fn ($c): GetTemplateTool => new GetTemplateTool($c->get(ElementorService::class))
+        );
+        $this->container->bind(
+            UpdateTemplateTool::class,
+            fn ($c): UpdateTemplateTool => new UpdateTemplateTool($c->get(ElementorService::class))
+        );
+        $this->container->bind(
+            SetPageLayoutTool::class,
+            fn ($c): SetPageLayoutTool => new SetPageLayoutTool($c->get(ElementorService::class))
         );
         $this->container->bind(
             SetGlobalColorsTool::class,
@@ -608,6 +643,10 @@ final class ToolProvider extends ServiceProvider
             fn ($c): ClearCacheTool => new ClearCacheTool($c->get(PerformanceService::class))
         );
         $this->container->bind(
+            FlushRewritesTool::class,
+            fn (): FlushRewritesTool => new FlushRewritesTool()
+        );
+        $this->container->bind(
             OptimizeImagesTool::class,
             fn (): OptimizeImagesTool => new OptimizeImagesTool()
         );
@@ -658,6 +697,14 @@ final class ToolProvider extends ServiceProvider
             fn ($c): ExecuteCodeTool => new ExecuteCodeTool($c->get(CodeExecutionService::class))
         );
         $this->container->bind(
+            FileWriteTool::class,
+            fn (): FileWriteTool => new FileWriteTool()
+        );
+        $this->container->bind(
+            FileReadTool::class,
+            fn (): FileReadTool => new FileReadTool()
+        );
+        $this->container->bind(
             ScaffoldPluginTool::class,
             fn ($c): ScaffoldPluginTool => new ScaffoldPluginTool($c->get(AiPlannerService::class))
         );
@@ -676,6 +723,7 @@ final class ToolProvider extends ServiceProvider
             // Site.
             $this->container->get(GetSiteInfoTool::class),
             $this->container->get(GetOptionTool::class),
+            $this->container->get(SetOptionTool::class),
 
             // Pages.
             $this->container->get(CreatePageTool::class),
@@ -695,6 +743,7 @@ final class ToolProvider extends ServiceProvider
             $this->container->get(DeletePostTool::class),
             $this->container->get(GetPostTool::class),
             $this->container->get(ListPostsTool::class),
+            $this->container->get(QueryPostTool::class),
             $this->container->get(SetFeaturedImageTool::class),
             $this->container->get(ManageCategoriesTool::class),
             $this->container->get(ManageTagsTool::class),
@@ -717,6 +766,7 @@ final class ToolProvider extends ServiceProvider
             // Plugins.
             $this->container->get(SearchPluginsTool::class),
             $this->container->get(InstallPluginTool::class),
+            $this->container->get(GetPluginStatusTool::class),
             $this->container->get(ActivatePluginTool::class),
             $this->container->get(DeactivatePluginTool::class),
             $this->container->get(DeletePluginTool::class),
@@ -729,12 +779,16 @@ final class ToolProvider extends ServiceProvider
             $this->container->get(SearchThemesTool::class),
             $this->container->get(InstallThemeTool::class),
             $this->container->get(ActivateThemeTool::class),
+            $this->container->get(GetActiveThemeTool::class),
             $this->container->get(CreateChildThemeTool::class),
             $this->container->get(ImportDemoTool::class),
             $this->container->get(ExportDemoTool::class),
 
             // Elementor.
             $this->container->get(CreateElementorPageTool::class),
+            $this->container->get(GetTemplateTool::class),
+            $this->container->get(UpdateTemplateTool::class),
+            $this->container->get(SetPageLayoutTool::class),
             $this->container->get(ImportTemplateTool::class),
             $this->container->get(ExportTemplateTool::class),
             $this->container->get(DuplicateTemplateTool::class),
@@ -774,6 +828,7 @@ final class ToolProvider extends ServiceProvider
             // Performance.
             $this->container->get(RunLighthouseTool::class),
             $this->container->get(ClearCacheTool::class),
+            $this->container->get(FlushRewritesTool::class),
             $this->container->get(OptimizeImagesTool::class),
             $this->container->get(GetCwvTool::class),
 
@@ -788,6 +843,8 @@ final class ToolProvider extends ServiceProvider
             // AI Planner.
             $this->container->get(PlanGoalTool::class),
             $this->container->get(ExecuteCodeTool::class),
+            $this->container->get(FileWriteTool::class),
+            $this->container->get(FileReadTool::class),
             $this->container->get(ScaffoldPluginTool::class),
             $this->container->get(ScaffoldThemeTool::class),
         ]);

@@ -12,11 +12,18 @@ namespace WpAgent\Exceptions;
  */
 final class ToolException extends WpAgentException
 {
-    public const WORDPRESS_ERROR     = 2001;
-    public const PERMISSION_DENIED   = 2002;
-    public const RESOURCE_NOT_FOUND  = 2003;
-    public const EXTERNAL_API_ERROR  = 2004;
-    public const OPERATION_FAILED    = 2005;
+    public const WORDPRESS_ERROR       = 2001;
+    public const PERMISSION_DENIED     = 2002;
+    public const RESOURCE_NOT_FOUND    = 2003;
+    public const EXTERNAL_API_ERROR    = 2004;
+    public const OPERATION_FAILED      = 2005;
+    public const INVALID_PARAMS        = 2006;
+    public const FILE_WRITE_FAILED     = 2010;
+    public const FILE_READ_FAILED      = 2011;
+    public const FILE_PATH_TRAVERSAL   = 2012;
+    public const ELEMENTOR_CACHE_STALE = 2020;
+    public const CDN_PURGE_FAILED      = 2021;
+    public const REWRITE_FLUSH_FAILED  = 2022;
 
     /**
      * @param string               $message  Error message.
