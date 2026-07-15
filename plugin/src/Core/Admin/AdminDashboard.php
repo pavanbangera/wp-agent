@@ -413,7 +413,7 @@ final class AdminDashboard
             .wpa-tabs {
                 display: flex;
                 gap: 10px;
-                margin-bottom: 20px;
+                margin-bottom: 24px;
                 background: rgba(15, 23, 42, 0.4);
                 padding: 6px;
                 border-radius: 12px;
@@ -474,60 +474,6 @@ final class AdminDashboard
                 border: 1px solid rgba(239, 68, 68, 0.2);
                 color: #f87171;
             }
-
-            /* Dark scrollbar styles for lists */
-            .wpa-scrollable::-webkit-scrollbar {
-                width: 8px;
-                height: 8px;
-            }
-            .wpa-scrollable::-webkit-scrollbar-track {
-                background: rgba(15, 23, 42, 0.3);
-                border-radius: 4px;
-            }
-            .wpa-scrollable::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 4px;
-            }
-            .wpa-scrollable::-webkit-scrollbar-thumb:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
-
-            .wpa-info-box {
-                background: rgba(96, 165, 250, 0.04);
-                border: 1px solid rgba(96, 165, 250, 0.15);
-                border-radius: 12px;
-                padding: 16px;
-                margin-bottom: 24px;
-                font-size: 13.5px;
-                line-height: 1.6;
-                color: #cbd5e1;
-            }
-
-            .wpa-info-box strong {
-                color: #60a5fa;
-            }
-
-            .wpa-footer {
-                margin-top: 40px;
-                border-top: 1px solid rgba(255, 255, 255, 0.08);
-                padding-top: 25px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                color: #64748b;
-                font-size: 13px;
-            }
-
-            .wpa-footer-credit a {
-                color: #94a3b8;
-                text-decoration: none;
-                font-weight: 500;
-                transition: color 0.2s ease;
-            }
-
-            .wpa-footer-credit a:hover {
-                color: #60a5fa;
-            }
         </style>
 
         <div class="wpa-dashboard-wrap">
@@ -540,6 +486,8 @@ final class AdminDashboard
                     <span class="wpa-badge">SSE Active Stream</span>
                 </div>
             </div>
+            
+
 
             <!-- Stats grid -->
             <div class="wpa-grid">
@@ -562,12 +510,6 @@ final class AdminDashboard
                 <h2 class="wpa-section-title">IDE MCP Configurator</h2>
                 <p style="color: #94a3b8; margin-bottom: 20px;">Generate your ready-to-copy client configuration file context for Cursor, Claude Code, Cline, etc. securely on the fly.</p>
                 
-                <!-- Explanation Box about Auth Mode -->
-                <div class="wpa-info-box">
-                    <strong>💡 Why is Basic Auth enough?</strong><br>
-                    Basic Auth using WordPress Application Passwords is secure, simple, and the recommended method for local development and connecting IDE clients (like Cursor, Claude Code, or Cline). A JWT token is not required unless you are integrating with stateless external server architectures. You can easily manage and revoke Application Passwords from your WordPress User Profile.
-                </div>
-
                 <input type="hidden" id="wpa-user" value="<?php echo esc_attr($username); ?>">
                 <input type="hidden" id="wpa-url" value="<?php echo esc_url($sseUrl); ?>">
                 <input type="hidden" id="wpa-nonce" value="<?php echo esc_attr(wp_create_nonce('wp_rest')); ?>">
@@ -575,8 +517,8 @@ final class AdminDashboard
 
                 <!-- Auth Mode Tabs -->
                 <div class="wpa-tabs">
-                    <button class="wpa-tab active" id="wpa-tab-basic" onclick="wpaSetMode('basic')">🔑 Basic Auth (Recommended)</button>
-                    <button class="wpa-tab" id="wpa-tab-jwt" onclick="wpaSetMode('jwt')">🔒 JWT Bearer Token (Optional)</button>
+                    <button class="wpa-tab active" id="wpa-tab-basic" onclick="wpaSetMode('basic')">🔑 Basic Auth</button>
+                    <button class="wpa-tab" id="wpa-tab-jwt" onclick="wpaSetMode('jwt')">🔒 JWT Bearer Token</button>
                 </div>
 
                 <!-- Basic Auth Panel -->
@@ -625,7 +567,7 @@ final class AdminDashboard
             <!-- Tools catalog -->
             <div class="wpa-section">
                 <h2 class="wpa-section-title">MCP Tools Directory</h2>
-                <div class="wpa-scrollable" style="max-height: 400px; overflow-y: auto;">
+                <div style="max-height: 400px; overflow-y: auto;">
                     <table class="wpa-table">
                         <thead>
                             <tr>
@@ -657,43 +599,36 @@ final class AdminDashboard
                 <?php if ( empty($logs) ) : ?>
                     <p style="color: #94a3b8;">No operations log entries found.</p>
                 <?php else : ?>
-                    <div class="wpa-scrollable" style="max-height: 350px; overflow-y: auto;">
-                        <table class="wpa-table">
-                            <thead>
+                    <table class="wpa-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Level</th>
+                                <th>Message</th>
+                                <th>Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $logs as $log ) : ?>
                                 <tr>
-                                    <th>Timestamp</th>
-                                    <th>Level</th>
-                                    <th>Message</th>
-                                    <th>Category</th>
+                                    <td><?php echo esc_html($log['created_at']); ?></td>
+                                    <td>
+                                        <span class="wpa-status-pill <?php echo strtolower($log['level']) === 'error' ? 'wpa-status-warn' : 'wpa-status-ok'; ?>">
+                                            <?php echo esc_html($log['level']); ?>
+                                        </span>
+                                    </td>
+                                    <td style="font-family: monospace; font-size: 13px;"><?php echo esc_html($log['message']); ?></td>
+                                    <td><?php echo esc_html($log['category'] ?? 'System'); ?></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ( $logs as $log ) : ?>
-                                    <tr>
-                                        <td><?php echo esc_html($log['created_at']); ?></td>
-                                        <td>
-                                            <span class="wpa-status-pill <?php echo strtolower($log['level']) === 'error' ? 'wpa-status-warn' : 'wpa-status-ok'; ?>">
-                                                <?php echo esc_html($log['level']); ?>
-                                            </span>
-                                        </td>
-                                        <td style="font-family: monospace; font-size: 13px;"><?php echo esc_html($log['message']); ?></td>
-                                        <td><?php echo esc_html($log['category'] ?? 'System'); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 <?php endif; ?>
             </div>
-
-            <!-- Dashboard Footer with credit link -->
-            <div class="wpa-footer">
-                <div class="wpa-footer-credit">
-                    Created by <a href="https://pavanbangera.com" target="_blank" rel="noopener">Pavan Bangera</a>
-                </div>
-                <div>
-                    WP Agent v0.1.0
-                </div>
+            
+            <!-- Dashboard Footer -->
+            <div class="wpa-footer" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; font-size: 13px; color: #64748b;">
+                <span>Created by <a href="https://pavanbangera.com" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">Pavan Bangera</a></span>
             </div>
         </div>
 
@@ -721,8 +656,8 @@ final class AdminDashboard
                     const rawPass  = document.getElementById('wpa-pass').value;
                     const cleanPass = rawPass.replace(/\s+/g, '');
                     authHeader = cleanPass
-                         ? 'Basic ' + btoa(username + ':' + cleanPass)
-                         : 'Basic <YOUR_BASE64_CREDENTIALS>';
+                        ? 'Basic ' + btoa(username + ':' + cleanPass)
+                        : 'Basic <YOUR_BASE64_CREDENTIALS>';
                 }
 
                 const configObj = {
@@ -819,4 +754,3 @@ final class AdminDashboard
         <?php
     }
 }
-
