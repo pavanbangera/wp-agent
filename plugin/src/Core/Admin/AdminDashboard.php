@@ -69,7 +69,7 @@ final class AdminDashboard
         // Get current user details.
         $currentUser = wp_get_current_user();
         $username    = $currentUser instanceof \WP_User ? $currentUser->user_login : 'admin';
-        $sseUrl      = get_rest_url(null, 'wp-agent/v1/mcp/sse');
+        $sseUrl      = get_rest_url(null, 'wp-agent/v1/sse');
 
         // Enqueue Google Font styling inline for convenience.
         ?>
